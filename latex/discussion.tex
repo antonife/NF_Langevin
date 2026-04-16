@@ -1,0 +1,168 @@
+% discussion.tex — Discussion and Conclusions for NF-Langevin EPR paper
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Recovery of the Full Entropy Production}
+
+The central finding of this work is that a normalizing-flow density estimator, trained independently on time-binned ensemble snapshots, recovers the full microscopic entropy production as measured by the Sekimoto stochastic-energetics framework.
+The integrated NF estimate $\Sigma_{\mathrm{NF}} = \num{11.41}$ slightly overshoots the Sekimoto value $\Sigma_{\mathrm{Sek}} = \num{10.49}$ by approximately $\num{9}\%$.
+This overshoot is attributable to two sources of numerical noise.
+First, the score function $s(x) = \partial\log p/\partial x$ is evaluated by central finite differences with step size $\epsilon = \num{e-5}$; in the low-density tails ($p(x) \lesssim \num{e-5}$), the log-probability surface is noisy and the finite-difference estimate amplifies this noise.
+Second, the EPR density $\sigma(x) = J^2/(D\,p)$ diverges as $p \to 0$; the density floor $p_{\min} = \num{e-10}$ mitigates this divergence but does not eliminate it entirely.
+Despite the overshoot, the NF estimate agrees with the Sekimoto value to within $\num{10}\%$, which is remarkable given that no information about the dynamics---only static ensemble snapshots---enters the density estimator.
+
+By contrast, the Schnakenberg coarse-grained estimate captures only $\Sigma_{\mathrm{CG}} = \num{0.47}$, representing $\approx\num{4.5}\%$ of the total dissipation.
+This implies that $\approx\num{95}\%$ of the entropy production in the driven Landau system arises from intrawell probability currents that are invisible to a two-state Markov projection.
+The NF method, by reconstructing the spatially resolved density and current, makes this hidden dissipation directly observable.
+
+The time-resolved EPR comparison (\cref{fig:epr_comparison}b) reveals that the NF and Sekimoto estimates agree not only in their integrated values but also in their temporal structure: both exhibit sharp peaks at the phase-switching events near $|h| \approx h_s \approx 1.54$ and lower but non-negligible dissipation between transitions.
+This temporal agreement confirms that the flow-based method correctly captures the transient dynamics, not merely the time-averaged dissipation.
+
+The force-free continuity-equation method (\cref{sec:epr_force_free}) provides a complementary route to the same quantity.
+By computing the probability current $J(x,t)$ directly from $\partial p/\partial t$ via \cref{eq:J_continuity}, this approach bypasses the known-force reconstruction (\cref{eq:J_from_nf}) entirely, requiring only the diffusion coefficient $D$ (estimated from Kramers--Moyal $D_2$).
+The integrated force-free estimate $\Sigma_{\mathrm{cont}} = \num{9.31}$ undershoots the Sekimoto reference by $\num{11.3}\%$---a larger error than the known-force method ($\num{3.6}\%$), but still sufficient to confirm that the vast majority of the hidden dissipation is recovered without specifying the equations of motion.
+The systematic undershoot is attributable to the finite temporal resolution ($N_{\mathrm{bins}} = 20$) in the centered finite-difference estimate of $\partial p/\partial t$, which smooths the sharpest transient features of the current.
+
+\subsection{The Necessity of a Multimodal Base Distribution}
+
+The architecture comparison (\cref{fig:architecture}) demonstrates a fundamental topological limitation of monotone normalizing flows.
+Because each planar layer (\cref{eq:planar_layer}) is constrained to be monotone ($u\,w > -1$), the full composition (\cref{eq:composition}) maps the real line to itself monotonically.
+A monotone map preserves the unimodality of the base distribution: if the cumulative distribution function (CDF) of the base has a single inflection point (as does any unimodal distribution), the CDF of the transformed variable has a single inflection point as well, and the resulting density is unimodal.
+This is not a capacity limitation---adding more layers cannot resolve it---but a topological obstruction inherent in the monotone composition theorem.
+
+The Gaussian mixture base (\cref{eq:gmm_base}) circumvents this obstruction by providing a base whose CDF already contains the necessary number of inflection points.
+For the bistable Landau potential, $K = 2$ Gaussian components suffice: the two components align with the two potential wells, and the monotone planar layers then refine the shape within each basin.
+The systematic layer scan in \cref{fig:architecture}c confirms this analysis: the KL divergence for the GMM base converges to $\sim\!\num{0.002}$ already at $L = 4$ layers, while the standard-base flow plateaus at $D_{\mathrm{KL}} \sim \num{0.15}$--$\num{0.33}$ regardless of depth.
+
+This result has practical implications beyond the present application.
+Any normalizing-flow architecture composed of monotone maps (including Real-NVP~\cite{Dinh2017} coupling layers in 1D) requires a multimodal base when the target density is multimodal.
+Neural ODE flows~\cite{Chen2018,Grathwohl2019} are not subject to this constraint because their continuous-time dynamics can create and annihilate modes, but in our experiments the Neural ODE approach proved impractical in pure NumPy/SciPy due to the high cost of finite-difference gradient computation through the ODE solver.
+
+\subsection{Architecture Choice in Context}
+\label{sec:architecture_context}
+
+\Cref{tab:architecture_comparison} compares the planar flow architecture used in this work against alternatives from the normalizing-flow taxonomy~\cite{Kobyzev2021}.
+For the one-dimensional, moderate-sample-size setting considered here, planar flows offer the best trade-off: minimal parameters, explicit invertibility (via Newton's method), and interpretable layer structure.
+
+\begin{table}[htbp]
+    \centering
+    \begin{threeparttable}
+        \caption{Comparison of normalizing-flow architectures for 1D density estimation.}
+        \label{tab:architecture_comparison}
+        \begin{tabular}{l c c c c}
+            \toprule
+            \textbf{Architecture} & \textbf{Jacobian} & \textbf{Inversion} & \textbf{Multimodal?} & \textbf{This Work} \\
+            \midrule
+            Planar~\cite{Rezende2015} & $O(1)$ & Newton & Requires GMM base & \textbf{Chosen} \\
+            Coupling (Real-NVP)~\cite{Dinh2017} & $O(1)$ & Explicit & Requires GMM base & Overkill for 1D \\
+            Autoregressive (MAF)~\cite{Papamakarios2021} & $O(D)$ & Sequential & Requires GMM base & Overkill for 1D \\
+            Neural ODE (FFJORD)~\cite{Grathwohl2019} & $O(1)$/step & ODE solve & Yes (native) & Too slow\tnote{a} \\
+            Spline~\cite{Kobyzev2021} & $O(1)$ & Analytic & Requires GMM base & Not tested \\
+            \bottomrule
+        \end{tabular}
+        \begin{tablenotes}
+            \small
+            \item[a] Finite-difference gradients through the ODE solver make pure NumPy/SciPy implementation impractical; would require PyTorch/JAX with automatic differentiation.
+        \end{tablenotes}
+    \end{threeparttable}
+\end{table}
+
+The key architectural insight is that for monotone flows (planar, coupling, autoregressive, spline), the base distribution must already encode the target's modal structure.
+Neural ODE flows can in principle learn multimodal targets from unimodal bases because the continuous-time dynamics are not constrained to be monotone, but this flexibility comes at significant computational cost.
+
+\subsection{Positioning in the Literature}
+\label{sec:positioning}
+
+The present work occupies a specific niche in the landscape of machine-learning approaches to entropy production estimation.
+\Cref{tab:method_comparison} compares our approach to recent alternatives.
+
+\begin{table}[htbp]
+    \centering
+    \begin{threeparttable}
+        \caption{Comparison of ML-based entropy production estimation methods.}
+        \label{tab:method_comparison}
+        \begin{tabular}{l c c c c}
+            \toprule
+            \textbf{Method} & \textbf{Output} & \textbf{Density} & \textbf{Time-dep.} & \textbf{Dim.} \\
+            \midrule
+            NEEP~\cite{Kim2020} & Scalar bound & Implicit & No & High \\
+            Score-based EPR~\cite{Boffi2024} & Field $\sigma(\mathbf{x})$ & Implicit & Steady only & High \\
+            Temporal NF~\cite{Feng2022} & $p(x,t)$ & Explicit & Yes & Low--mod \\
+            Score-PINN~\cite{Hu2024} & $p(x,t)$ & Via score & Yes & High \\
+            \textbf{This work (known force)} & Field $\sigma(x,t)$ & \textbf{Explicit} & \textbf{Yes} & 1D \\
+            \textbf{This work (force-free)} & Field $\sigma(x,t)$ & \textbf{Explicit} & \textbf{Yes} & 1D \\
+            \bottomrule
+        \end{tabular}
+        \begin{tablenotes}
+            \small
+            \item NEEP = Neural Estimator for Entropy Production.
+            Implicit density means the method learns a score or classifier without direct access to $p(x)$.
+        \end{tablenotes}
+    \end{threeparttable}
+\end{table}
+
+The score-based approach of Boffi and Vanden-Eijnden~\cite{Boffi2024,Boffi2022} is the most directly comparable: they learn the score function $\nabla\log p$ via neural networks and use it to estimate the probability current and EPR in active matter systems.
+Their method scales to high dimensions using spatially-local transformer architectures, but is designed for steady-state (or slowly varying) systems.
+Our approach complements theirs by providing an \emph{explicit} density estimate $p(x,t)$ that tracks a rapidly driven protocol, at the cost of being restricted to low dimensions where snapshot-by-snapshot training is feasible.
+Moreover, our force-free extension (\cref{sec:epr_force_free}) shares the spirit of Boffi and Vanden-Eijnden's force-free formulation~\cite{Boffi2024}, but obtains the current from the continuity equation rather than from a learned score field, and applies to time-dependent (non-steady-state) protocols.
+
+Temporal normalizing flows~\cite{Feng2022} train a single flow on the Fokker--Planck loss to learn $p(x,t)$ across all times simultaneously.
+This approach exploits temporal smoothness but requires knowledge of the Fokker--Planck operator, which in our case is used only \emph{after} the density is learned (to reconstruct the current).
+The snapshot-by-snapshot training used here is less sample-efficient but avoids coupling the density estimator to the physics, enabling application to systems where the force field is partially unknown.
+
+\subsection{Limitations}
+
+Several limitations of the present approach should be noted.
+
+\paragraph{One-dimensional setting.}
+The system studied here is one-dimensional, which allows exact Sekimoto and Schnakenberg benchmarks.
+Extending to higher dimensions requires coupling layers (e.g., Real-NVP) or autoregressive flows, and the Fokker--Planck current becomes a vector field, significantly complicating the EPR computation.
+
+\paragraph{Pure NumPy implementation and computational cost.}
+The absence of automatic differentiation limits the implementation to finite-difference score estimation and forward-difference gradients for training.
+While this makes the code pedagogically transparent and dependency-free, it precludes scaling to large datasets or high-dimensional problems.
+Reimplementation in PyTorch or JAX would enable exact score computation via backpropagation and GPU-accelerated training.
+On a single CPU core, the computational cost for the present benchmark (\num{5000} particles, \num{40} time bins, \num{8}-layer flows) breaks down as follows: Langevin simulation requires ${\sim}\SI{7}{s}$; normalizing flow training dominates at ${\sim}\SI{40}{s}$ per snapshot (${\sim}\SI{27}{min}$ total for \num{40} models); and EPR computation (both known-force and force-free methods) adds $<\SI{0.5}{s}$.
+The force-free continuity-equation method incurs negligible overhead (${\sim}\SI{0.4}{s}$ for Kramers--Moyal $D$ estimation plus continuity integration) compared to the known-force method.
+For future \num{2}D or \num{3}D extensions, the $\mathcal{O}(N_{\mathrm{bins}})$ scaling of NF training will become the primary bottleneck, motivating GPU acceleration.
+
+\paragraph{Independent snapshots.}
+Each temporal snapshot is fitted independently, discarding temporal correlations between consecutive density estimates.
+A continuous normalizing flow (FFJORD~\cite{Grathwohl2019}) or a conditional flow $p(x|t)$ parameterized by the protocol phase could exploit temporal smoothness to regularize the density estimates and reduce the tail noise that contributes to the EPR overshoot.
+
+\paragraph{Known dynamics (partially resolved).}
+The known-force method (\cref{sec:epr_from_nf}) requires the force field $-V'(x,h)/\gamma$ to reconstruct the probability current (\cref{eq:J_from_nf}).
+The continuity-equation extension (\cref{sec:epr_force_free}) removes this requirement, computing the current from $\partial p/\partial t$ alone, with only the diffusion coefficient $D$ needed as input.
+The force-free estimate achieves $\num{11.3}\%$ accuracy on the present benchmark (\cref{sec:results_force_free}), demonstrating feasibility.
+The remaining limitation is the need for $D$; in systems with state-dependent diffusion $D(x)$, a spatially resolved Kramers--Moyal estimate~\cite{Gorjao2021,Lyu2024} or a learned diffusion field would be required.
+
+\subsection{Relationship to the Companion Paper}
+
+This work complements a companion study~\cite{FernandezCaballero2026} on topological hysteresis bounds in the same driven Landau system.
+The companion paper established that the deterministic ($T = 0$) hysteresis loop area furnishes an upper bound on per-cycle dissipation, and that the Schnakenberg two-state projection captures only $\approx\num{4}$--$\num{6}\%$ of the Sekimoto total, leaving $\sim\!\num{95}\%$ as hidden entropy.
+The present work closes the circle by demonstrating that this hidden fraction can be recovered via continuous density estimation using normalizing flows, without recourse to analytical knowledge of the probability density.
+
+\subsection{Future Directions}
+
+Natural extensions of this work include:
+(i)~application to experimental trajectory data from colloidal particles in optical traps or molecular motors, where the force field is unknown---the force-free continuity-equation method (\cref{sec:epr_force_free}) is directly applicable to such settings, as validated in \cref{sec:results_force_free};
+(ii)~extension to higher-dimensional systems using coupling-layer architectures;
+(iii)~incorporation of temporal correlations via conditional or continuous normalizing flows to reduce snapshot-by-snapshot noise;
+and (iv)~combination with thermodynamic uncertainty relations~\cite{Barato2015,Gingrich2016} to derive tighter bounds on currents and efficiencies from the flow-estimated EPR.
+
+
+\section{Conclusions}
+\label{sec:conclusions}
+
+We have demonstrated that stacked one-dimensional planar normalizing flows with a Gaussian mixture base distribution can learn the non-equilibrium probability density $p(x,t)$ from ensemble trajectory data in a periodically driven bistable Landau potential.
+The flow-based density enables direct computation of the spatially resolved Fokker--Planck probability current and entropy production rate density, recovering the full microscopic dissipation without coarse-graining.
+
+The key findings are:
+\begin{enumerate}
+    \item The NF-based entropy production $\Sigma_{\mathrm{NF}} \approx \num{11.4}$ agrees with the Sekimoto total $\Sigma_{\mathrm{Sek}} \approx \num{10.5}$ to within $\num{10}\%$, recovering the vast majority of the hidden entropy that a two-state Schnakenberg projection ($\Sigma_{\mathrm{CG}} \approx \num{0.5}$, or $\approx\num{5}\%$ of the total) misses.
+    \item A Gaussian mixture base distribution is essential for bimodal targets: the monotone composition theorem prevents a standard normal base from generating multimodal densities, regardless of the number of flow layers.
+    \item A force-free extension via the continuity equation computes the probability current directly from $\partial p/\partial t$, bypassing the need for known dynamics.
+    Using only the diffusion coefficient $D$ (estimated from Kramers--Moyal $D_2$), this method achieves $\Sigma_{\mathrm{cont}} = \num{9.31}$, within $\num{11.3}\%$ of the Sekimoto reference, demonstrating that the NF-EPR framework can operate from trajectory data alone.
+    \item The entire implementation requires only NumPy and SciPy, making it accessible for teaching and for rapid prototyping of entropy production analyses in small-scale stochastic systems.
+\end{enumerate}

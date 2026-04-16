@@ -1,0 +1,55 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{threeparttable}
+\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{cleveref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric}
+\geometry{a4paper, margin=1in}
+
+% Allow slightly more flexible line breaking to avoid overfull hboxes
+\tolerance=2000
+\emergencystretch=2em
+
+% Custom commands
+\newcommand{\kB}{k_{\mathrm{B}}}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\EPR}{\dot{\Sigma}}
+\newcommand{\KL}{\mathrm{KL}}
+
+\title{Recovering Hidden Entropy Production\\via Normalizing Flows in Driven Langevin Dynamics}
+\author{Antonio Fern\'andez-Caballero\\
+\small Departamento de Teor\'ia de la Se\~nal y Comunicaciones,
+Universidad Rey Juan Carlos, Fuenlabrada, Spain}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Coarse-grained descriptions of driven stochastic systems systematically underestimate entropy production by discarding intra-state fluctuations.
+We present a normalizing-flow approach that learns the full continuous probability density $p(x,t)$ from ensemble trajectory data, enabling computation of the microscopic entropy production rate (EPR) via the Fokker--Planck probability current without coarse-graining.
+We apply the method to an overdamped Langevin particle in a periodically tilted bistable Landau potential $V(x,h) = x^4 - 2x^2 + hx$.
+Using stacked one-dimensional planar flows with a Gaussian mixture base distribution, we demonstrate that the flow-based EPR recovers the full Sekimoto dissipation ($\Sigma_{\mathrm{NF}} \approx \Sigma_{\mathrm{Sek}}$), whereas a two-state Schnakenberg projection captures only ${\approx}\,5\%$~of the total.
+We show analytically and numerically that a Gaussian mixture base is essential for bimodal targets: monotone composition of a unimodal base cannot capture multimodal densities regardless of network depth.
+A force-free extension computes the probability current directly from the continuity equation $\partial p/\partial t = -\partial J/\partial x$, using only the NF-learned densities and a Kramers--Moyal estimate of the diffusion coefficient, achieving ${\approx}\,11\%$ accuracy without knowledge of the force field.
+The method is implemented in pure NumPy/SciPy without automatic differentiation, making it accessible for pedagogical and small-scale research applications.
+\end{abstract}
+
+\input{introduction}
+\input{methods_results}
+\input{discussion}
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}

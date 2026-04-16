@@ -1,0 +1,564 @@
+% methods_results.tex — Theory and Methods + Results for NF-Langevin EPR paper
+% Requires: amsmath, amssymb, graphicx, booktabs, siunitx, cleveref, threeparttable, bm
+
+%=============================================================================
+\section{Theory and Methods}
+\label{sec:methods}
+%=============================================================================
+
+\subsection{Langevin Dynamics and the Fokker--Planck Equation}
+\label{sec:langevin}
+
+We consider a single overdamped degree of freedom $x$ immersed in a thermal bath at temperature $T$ and evolving in a time-dependent Landau potential
+\begin{equation}
+    V(x, h) = x^4 - 2x^2 + h\,x,
+    \label{eq:landau_potential}
+\end{equation}
+where $h(t)$ is an externally imposed conjugate field that tilts the bistable landscape.
+The overdamped Langevin equation of motion reads
+\begin{equation}
+    \gamma\,dx = -V'(x,h)\,dt + \sqrt{2\gamma k_{\mathrm{B}}T}\,dW(t),
+    \label{eq:langevin}
+\end{equation}
+where $\gamma$ is the friction coefficient, $V'(x,h) = \partial V/\partial x = 4x^3 - 4x + h$ denotes the spatial derivative of the potential, and $dW(t)$ is a standard Wiener increment satisfying $\langle dW(t)\rangle = 0$ and $\langle dW(t)\,dW(t')\rangle = \delta(t-t')\,dt$.
+Defining the diffusion coefficient $D = k_{\mathrm{B}}T/\gamma$, the equation of motion can be rewritten as
+\begin{equation}
+    dx = -\frac{V'(x,h)}{\gamma}\,dt + \sqrt{2D}\,dW(t).
+    \label{eq:langevin_D}
+\end{equation}
+
+We drive the system with a sinusoidal protocol
+\begin{equation}
+    h(t) = h_{\max}\sin\!\left(\frac{2\pi t}{\mathcal{T}}\right),
+    \label{eq:protocol}
+\end{equation}
+where $h_{\max}$ is the driving amplitude and $\mathcal{T}$ the period.
+The numerical parameters adopted throughout this work are collected in \cref{tab:sim_params}.
+
+The trajectories are integrated with the explicit Euler--Maruyama scheme~\cite{Kloeden1992}.
+At each time step $\Delta t$, the particle position is updated according to
+\begin{equation}
+    x(t+\Delta t) = x(t) - \frac{V'(x,h)}{\gamma}\,\Delta t + \sqrt{2D\,\Delta t}\;\eta(t),
+    \label{eq:euler_maruyama}
+\end{equation}
+where $\eta(t) \sim \mathcal{N}(0,1)$ are independent standard Gaussian random variates generated with a seeded random number generator (\texttt{numpy.random.default\_rng(42)}) to ensure reproducibility.
+An ensemble of $N = \num{5000}$ particles is evolved for $\num{6}$ complete driving cycles; the initial positions are drawn uniformly from the set $\{-1, +1\}$, placing half the ensemble in each potential well.
+The first five cycles serve as a transient relaxation period, and all subsequent analysis is performed on the last (sixth) cycle, which represents the non-equilibrium steady-state limit cycle.
+
+The evolution of the probability density $p(x,t)$ is governed by the Fokker--Planck equation
+\begin{equation}
+    \frac{\partial p}{\partial t} = -\frac{\partial J}{\partial x},
+    \label{eq:fokker_planck}
+\end{equation}
+where the probability current is
+\begin{equation}
+    J(x,t) = -\frac{V'(x,h)}{\gamma}\,p(x,t) - D\,\frac{\partial p}{\partial x}.
+    \label{eq:probability_current}
+\end{equation}
+At equilibrium ($h = \text{const}$, $\partial p/\partial t = 0$), the current vanishes identically and the density reduces to the Boltzmann distribution
+\begin{equation}
+    p_{\mathrm{eq}}(x) = \frac{1}{Z}\exp\!\left[-\frac{V(x,h)}{k_{\mathrm{B}}T}\right],
+    \qquad
+    Z = \int_{-\infty}^{\infty}\exp\!\left[-\frac{V(x,h)}{k_{\mathrm{B}}T}\right]dx.
+    \label{eq:boltzmann}
+\end{equation}
+
+\begin{table}[htbp]
+    \centering
+    \begin{threeparttable}
+        \caption{Simulation parameters for the driven Langevin ensemble.}
+        \label{tab:sim_params}
+        \begin{tabular}{l c c l}
+            \toprule
+            \textbf{Parameter} & \textbf{Symbol} & \textbf{Value} & \textbf{Description} \\
+            \midrule
+            Friction coefficient & $\gamma$ & \num{1.0} & Overdamped regime \\
+            Thermal energy & $k_{\mathrm{B}}T$ & \num{0.5} & Sets thermal noise scale \\
+            Diffusion coefficient & $D$ & \num{0.5} & $D = k_{\mathrm{B}}T/\gamma$ \\
+            Time step & $\Delta t$ & \num{0.002} & Euler--Maruyama integration \\
+            Driving amplitude & $h_{\max}$ & \num{2.0} & Exceeds spinodal $h_s \approx 1.54$ \\
+            Driving period & $\mathcal{T}$ & \SI{10}{s} & Sinusoidal protocol \\
+            Ensemble size & $N$ & \num{5000} & Independent particles \\
+            Transient cycles & --- & \num{5} & Discarded before analysis \\
+            Analysis cycle & --- & 1 (6th) & Non-equilibrium steady state \\
+            RNG seed & --- & 42 & Reproducibility \\
+            \bottomrule
+        \end{tabular}
+        \begin{tablenotes}
+            \small
+            \item All quantities are expressed in natural units of the potential (\cref{eq:landau_potential}).
+            Particles are initialized at $x_0 \in \{-1, +1\}$ with equal probability.
+        \end{tablenotes}
+    \end{threeparttable}
+\end{table}
+
+
+\subsection{Entropy Production Rate}
+\label{sec:epr_theory}
+
+Under time-dependent driving, the probability current $J(x,t)$ (\cref{eq:probability_current}) does not vanish, and the system operates away from detailed balance.
+The local entropy production rate (EPR) density quantifies the irreversibility at each point in configuration space~\cite{Seifert2012}:
+\begin{equation}
+    \sigma(x,t) = \frac{J(x,t)^2}{D\,p(x,t)}.
+    \label{eq:epr_density}
+\end{equation}
+The total instantaneous EPR is obtained by integrating over the spatial domain:
+\begin{equation}
+    \dot{\Sigma}(t) = \int_{-\infty}^{\infty}\sigma(x,t)\,dx = \int_{-\infty}^{\infty}\frac{J(x,t)^2}{D\,p(x,t)}\,dx.
+    \label{eq:epr_total}
+\end{equation}
+The cycle-integrated entropy production,
+\begin{equation}
+    \Sigma_{\mathrm{cyc}} = \int_0^{\mathcal{T}} \dot{\Sigma}(t)\,dt,
+    \label{eq:sigma_cycle}
+\end{equation}
+measures the total irreversible heat dissipated (in units of $k_{\mathrm{B}}$) during one driving period.
+Physically, $\sigma(x,t)\,dx$ corresponds to the rate at which entropy is produced in the interval $[x, x+dx]$ due to the irreversible probability flux driven by the non-equilibrium force.
+The EPR vanishes if and only if the system satisfies detailed balance ($J \equiv 0$), providing a sharp diagnostic of irreversibility.
+
+
+\subsection{Reference Methods for EPR Estimation}
+\label{sec:reference_methods}
+
+We benchmark the normalizing-flow approach against two established methods that provide complementary views of the dissipation.
+
+\subsubsection{Sekimoto stochastic energetics (total EPR)}
+\label{sec:sekimoto}
+
+The total EPR is computed from the stochastic first law without reference to the probability density~\cite{Sekimoto2010}.
+The instantaneous input power is $\dot{W}(t) = \langle x(t)\rangle\,\dot{h}(t)$, where
+$\dot{h}(t) = h_{\max}(2\pi/\mathcal{T})\cos(2\pi t/\mathcal{T})$ is the protocol rate.
+The internal energy rate $\dot{E}(t) = d\langle V(x,h)\rangle/dt$ is computed numerically from the ensemble-averaged potential energy with a moving-average smoothing kernel of width \num{100}~time steps.
+The dissipation rate follows from energy conservation as $\dot{Q}_{\mathrm{diss}} = \dot{W} - \dot{E}$, and the Sekimoto EPR is
+\begin{equation}
+    \dot{\Sigma}_{\mathrm{Sek}}(t) = \frac{\dot{Q}_{\mathrm{diss}}(t)}{k_{\mathrm{B}}T} = \frac{\langle x\rangle\,\dot{h} - \dot{E}}{k_{\mathrm{B}}T}.
+    \label{eq:epr_sekimoto}
+\end{equation}
+This quantity captures \emph{all} dissipation---intrawell relaxation, interwell transitions, and driving-induced currents---and serves as the ground-truth total entropy production.
+
+\subsubsection{Schnakenberg formula (coarse-grained EPR)}
+\label{sec:schnakenberg}
+
+The Schnakenberg approach projects the continuous dynamics onto a two-state Markov model by coarse-graining the position space into left ($x < 0$) and right ($x \geq 0$) basins~\cite{Schnakenberg1976}.
+At each time step, we count the number of particles transitioning from left to right ($n_{01}$) and from right to left ($n_{10}$).
+The raw transition fluxes are smoothed with a uniform kernel of width $\sigma_w = \SI{0.4}{s}$ (corresponding to \num{200} time steps) to isolate collective macroscopic transitions from microscopic Poisson noise.
+The coarse-grained EPR is then
+\begin{equation}
+    \dot{\Sigma}_{\mathrm{CG}}(t) = \frac{J_{\mathrm{net}}(t)}{\Delta t}\,\ln\frac{J_{01}(t)}{J_{10}(t)},
+    \label{eq:epr_schnakenberg}
+\end{equation}
+where $J_{\mathrm{net}} = (J_{01} - J_{10})/N$ is the net probability flux per particle and $J_{01}$, $J_{10}$ are the smoothed transition counts.
+Because this projection discards all intrawell information, the Schnakenberg EPR provides only a lower bound on the total entropy production.
+
+\subsubsection{Hidden entropy production}
+\label{sec:hidden_entropy}
+
+The gap between the Sekimoto and Schnakenberg estimates defines the hidden entropy~\cite{Esposito2012,Busiello2019}:
+\begin{equation}
+    \Sigma_{\mathrm{hidden}} = \Sigma_{\mathrm{Sek}} - \Sigma_{\mathrm{CG}}.
+    \label{eq:hidden_entropy}
+\end{equation}
+In the bistable Landau system under strong driving, the overwhelming majority of dissipation arises from intrawell probability currents that are invisible to the two-state projection.
+The fraction $\Sigma_{\mathrm{hidden}}/\Sigma_{\mathrm{Sek}}$ quantifies the information loss inherent in the coarse-graining and motivates the use of methods that operate directly on the full density $p(x,t)$.
+
+
+\subsection{Normalizing Flows for Density Estimation}
+\label{sec:nf_density}
+
+The central methodological contribution of this work is the use of normalizing flows to learn the non-equilibrium density $p(x,t)$ from ensemble snapshots, thereby enabling direct computation of the probability current and EPR density at each instant of the driving cycle.
+
+\subsubsection{Why normalizing flows?}
+\label{sec:why_nf}
+
+Computing the EPR density (\cref{eq:epr_density}) requires both the probability density $p(x)$ and its spatial derivative $\partial p/\partial x$---or equivalently, the score function $s(x) = \partial\log p/\partial x$.
+Several density estimation methods could in principle provide these quantities, but each has limitations for the present application:
+\begin{itemize}
+    \item \textbf{Histograms} provide $p(x)$ but not its derivative; finite differences on binned counts are numerically unstable.
+    \item \textbf{Kernel density estimation (KDE)} provides smooth densities and scores, but bandwidth selection is sensitive in multimodal settings, and computational cost scales with ensemble size.
+    \item \textbf{Score matching}~\cite{Boffi2024,Boffi2022} learns the score directly but provides only an implicit density---integrating to recover $p(x)$ introduces additional error.
+    \item \textbf{Neural density estimators} (e.g., mixture density networks) can model complex distributions but lack tractable likelihoods or require expensive sampling for normalization.
+\end{itemize}
+
+Normalizing flows~\cite{Rezende2015,Kobyzev2021,Papamakarios2021} offer a compelling alternative: they provide an \emph{explicit}, \emph{normalized} density $p(x)$ via the change-of-variables formula (\cref{eq:change_of_variables}), with tractable likelihoods enabling maximum-likelihood training.
+The density and its derivatives are available in closed form (up to the inverse map), allowing direct computation of the Fokker--Planck current without post-hoc integration or kernel smoothing.
+For the one-dimensional problem considered here, planar flows~\cite{Rezende2015} provide a minimal architecture with only $3L$ parameters per layer, making the method interpretable and suitable for pedagogical purposes.
+Recent work on temporal normalizing flows~\cite{Feng2022} and score-based Fokker--Planck solvers~\cite{Hu2024,Nagel2025} demonstrates the broader applicability of flow-based methods to stochastic dynamics.
+
+\subsubsection{Planar flow architecture}
+\label{sec:planar_flow}
+
+A planar flow in one dimension is a diffeomorphism of the form~\cite{Kobyzev2021}
+\begin{equation}
+    g(x) = x + u\,\tanh(w\,x + b),
+    \label{eq:planar_layer}
+\end{equation}
+where $u, w, b \in \mathbb{R}$ are learnable parameters.
+The Jacobian is a scalar:
+\begin{equation}
+    \frac{dg}{dx} = 1 + u\,w\,\mathrm{sech}^2(w\,x + b).
+    \label{eq:planar_jacobian}
+\end{equation}
+For the mapping to be a diffeomorphism (monotone, and hence invertible), we require $dg/dx > 0$ everywhere, which imposes the constraint $u\,w > -1$.
+This condition is enforced during optimization by projecting parameters to satisfy $u\,w > -1 + \varepsilon$ with $\varepsilon = 0.01$.
+
+An expressive transformation is obtained by composing $L$ such layers:
+\begin{equation}
+    f = g_L \circ g_{L-1} \circ \cdots \circ g_1,
+    \label{eq:composition}
+\end{equation}
+with each layer $g_l$ having its own parameter triple $(u_l, w_l, b_l)$.
+Because each layer is monotone and the composition of monotone functions is monotone, the full map $f$ is a diffeomorphism for any $L$.
+
+Given a base distribution $p_Z(z)$ and the generative map $y = f(z)$, the density in data space follows from the change-of-variables formula:
+\begin{equation}
+    \log p(y) = \log p_Z\!\left(f^{-1}(y)\right) - \sum_{l=1}^{L}\log\left|\frac{dg_l}{dx}\right|_{x = z_l},
+    \label{eq:change_of_variables}
+\end{equation}
+where $z_l$ denotes the intermediate variable after $l$ layers and $z_0 = f^{-1}(y)$ is the latent variable.
+In the normalizing direction ($y \to z$), the inverse $f^{-1}$ is computed by sequentially inverting each layer via Newton's method applied to the scalar equation $g_l(x) = y_l$, converging to machine precision ($\text{tol} = \num{e-12}$) within \num{50} iterations.
+
+\subsubsection{Gaussian mixture base distribution}
+\label{sec:gmm_base}
+
+A standard normal base distribution $p_Z(z) = \mathcal{N}(0,1)$ is unimodal.
+Because each planar layer (\cref{eq:planar_layer}) is a monotone map, the composition $f$ is also monotone.
+A monotone transformation of a unimodal density remains unimodal---this is a consequence of the monotone composition theorem.
+Therefore, a planar flow with a standard normal base \emph{cannot} represent a bimodal target density, regardless of the number of layers $L$.
+
+The Landau potential (\cref{eq:landau_potential}) at $h \approx 0$ produces a symmetric double-well with a bimodal equilibrium distribution, rendering the standard-base flow fundamentally inadequate.
+To overcome this limitation, we replace the base with a $K$-component Gaussian mixture model (GMM):
+\begin{equation}
+    p_Z(z) = \sum_{k=1}^{K} w_k\,\mathcal{N}(z;\,\mu_k,\,\sigma_k^2),
+    \label{eq:gmm_base}
+\end{equation}
+where the weights $w_k$ satisfy $\sum_k w_k = 1$ and are parameterized via a softmax over $K-1$ logit parameters to ensure positivity and normalization.
+The component means $\mu_k$ and log-standard-deviations $\log\sigma_k$ are learnable.
+For the bistable potential, $K = 2$ suffices: the two Gaussian components align with the two potential wells, and the flow layers then refine the shape within each basin.
+The total number of learnable parameters is $3L + 3K - 1$: three per flow layer plus $K-1$ logit weights, $K$ means, and $K$ log-standard-deviations.
+
+
+\subsection{Training Procedure}
+\label{sec:training}
+
+The flow parameters are fitted by minimizing the negative log-likelihood (NLL) over the ensemble snapshot:
+\begin{equation}
+    \mathcal{L}(\boldsymbol{\theta}) = -\frac{1}{N}\sum_{i=1}^{N}\log p_{\boldsymbol{\theta}}(x_i),
+    \label{eq:nll_loss}
+\end{equation}
+where $\boldsymbol{\theta}$ denotes the concatenated parameter vector (flow layers and, if applicable, GMM base parameters) and $\{x_i\}_{i=1}^N$ are the particle positions at a given time snapshot.
+
+Optimization uses the L-BFGS-B algorithm~\cite{Byrd1995} (\texttt{scipy.\allowbreak optimize.\allowbreak minimize}), with function and gradient tolerances of $\num{e-10}$ and $\num{e-6}$, respectively.
+A maximum of \num{400}--\num{500} iterations is allotted per snapshot; convergence is typically achieved within \num{200}--\num{300} iterations.
+To guard against numerical instability, any parameter configuration producing NaN or $\pm\infty$ in the log-likelihood is assigned a penalty value of $\num{e10}$.
+
+For the time-resolved EPR analysis (\cref{sec:epr_from_nf}), the last driving cycle is discretized into $N_{\mathrm{bins}} = 40$ uniformly spaced temporal snapshots.
+One independent flow is trained on each snapshot, yielding a sequence of density estimates $\{p_{\boldsymbol{\theta}_j}(x)\}_{j=1}^{N_{\mathrm{bins}}}$ that collectively approximate the time-dependent density $p(x,t)$.
+Each flow uses $L = 14$ planar layers and a $K = 2$ GMM base, for a total of $3 \times 14 + 3 \times 2 - 1 = 47$ learnable parameters per snapshot.
+
+
+\subsection{EPR from Learned Flows}
+\label{sec:epr_from_nf}
+
+Given a trained flow at time $t$, the non-equilibrium density and its spatial derivative are computed as follows.
+The density is obtained via the change-of-variables formula (\cref{eq:change_of_variables}):
+\begin{equation}
+    p(x) = \exp\!\left[\log p_{\boldsymbol{\theta}}(x)\right].
+    \label{eq:nf_density}
+\end{equation}
+The score function---the logarithmic derivative of the density---is evaluated by central finite differences with step size $\epsilon = \num{e-5}$:
+\begin{equation}
+    s(x) \equiv \frac{\partial\log p}{\partial x} \approx \frac{\log p(x + \epsilon) - \log p(x - \epsilon)}{2\epsilon}.
+    \label{eq:score_function}
+\end{equation}
+The spatial derivative of the density follows from the identity $\partial p/\partial x = p(x)\,s(x)$.
+
+With $p(x)$ and $\partial p/\partial x$ in hand, the Fokker--Planck probability current (\cref{eq:probability_current}) is reconstructed using the known force field $-V'(x,h)/\gamma$ and diffusion coefficient $D$:
+\begin{equation}
+    J(x,t) = -\frac{V'(x,h(t))}{\gamma}\,p(x) - D\,p(x)\,s(x).
+    \label{eq:J_from_nf}
+\end{equation}
+The EPR density follows from \cref{eq:epr_density}, with a density floor of $p_{\min} = \num{e-10}$ to prevent division by zero in the tails.
+The instantaneous total EPR at each time bin is obtained by trapezoidal integration of $\sigma(x)$ over a spatial grid of \num{300} points spanning $x \in [-3, 3]$, and the cycle-integrated EPR $\Sigma_{\mathrm{NF}}$ is computed by trapezoidal integration of the EPR time series over the driving period.
+
+\Cref{fig:pipeline} summarizes the complete NF-EPR pipeline, from ensemble simulation through density learning to entropy production estimation.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[
+        box/.style={draw,rounded corners=3pt,minimum height=0.9cm,
+                    align=center,font=\footnotesize,text width=1.8cm},
+        arr/.style={-{Stealth[length=4pt]},thick},
+        lbl/.style={font=\scriptsize,align=center},
+        datablue/.style={fill=blue!15},
+        nfgreen/.style={fill=green!15},
+        physred/.style={fill=red!15}
+    ]
+      % Boxes
+      \node[box,datablue] (ens) at (0,0) {Ensemble\\$\{x_i(t)\}$};
+      \node[box,datablue] (bins) at (2.8,0) {Time bins\\$N_{\mathrm{bins}}\!=\!40$};
+      \node[box,nfgreen] (nf) at (5.6,0) {Train NF\\$L\!=\!14$, $K\!=\!2$};
+      \node[box,nfgreen] (dens) at (8.4,0) {$p(x), s(x)$\\density+score};
+      \node[box,physred] (curr) at (11.2,0) {$J(x,t)$\\FP current};
+      \node[box,physred] (epr) at (14.0,0) {$\sigma(x,t)$\\EPR field};
+
+      % Arrows with labels
+      \draw[arr] (ens) -- (bins);
+      \draw[arr] (bins) -- (nf);
+      \draw[arr] (nf) -- (dens) node[midway,above,lbl] {L-BFGS-B};
+      \draw[arr] (dens) -- (curr) node[midway,above,lbl] {Eq.~\eqref{eq:J_from_nf}};
+      \draw[arr] (curr) -- (epr) node[midway,above,lbl] {Eq.~\eqref{eq:epr_density}};
+
+      % Integration arrow
+      \draw[arr,blue!70!black] (epr.south) -- ++(0,-0.9) node[below,font=\footnotesize] {$\dot{\Sigma}(t) = \int\!\sigma\,dx$};
+
+      % Color legend
+      \node[font=\scriptsize,blue!70!black] at (1.4,-1.2) {Data};
+      \node[font=\scriptsize,green!50!black] at (7.0,-1.2) {NF learning};
+      \node[font=\scriptsize,red!70!black] at (12.6,-1.2) {Physics};
+    \end{tikzpicture}
+    \caption{The NF-EPR pipeline.
+    Ensemble particle positions are binned in time; an independent normalizing flow is trained on each snapshot to learn $p(x)$ and the score $s(x)$.
+    The Fokker--Planck current $J(x,t)$ is reconstructed using the known force field (\cref{eq:J_from_nf}), and the EPR density follows from \cref{eq:epr_density}.
+    Integration over space and time yields the cycle-integrated entropy production $\Sigma_{\mathrm{NF}}$.}
+    \label{fig:pipeline}
+\end{figure}
+
+
+\subsection{Force-Free EPR via the Continuity Equation}
+\label{sec:epr_force_free}
+
+The method of \cref{sec:epr_from_nf} reconstructs the probability current using the known force field $-V'(x,h)/\gamma$ (\cref{eq:J_from_nf}), which limits its applicability to systems with explicitly known dynamics.
+We now derive an alternative that computes the current directly from the time evolution of the NF-learned densities, requiring only the diffusion coefficient $D$ as external input.
+
+The key observation is that the Fokker--Planck equation (\cref{eq:fokker_planck}) is a continuity equation: $\partial p/\partial t = -\partial J/\partial x$.
+Given a sequence of NF density estimates $\{p_{\boldsymbol{\theta}_j}(x)\}_{j=1}^{N_{\mathrm{bins}}}$ at times $\{t_j\}$, the time derivative is approximated by centered finite differences:
+\begin{equation}
+    \left.\frac{\partial p}{\partial t}\right|_{t_j} \approx \frac{p_{\boldsymbol{\theta}_{j+1}}(x) - p_{\boldsymbol{\theta}_{j-1}}(x)}{t_{j+1} - t_{j-1}}.
+    \label{eq:dpdt_fd}
+\end{equation}
+Because each $p_{\boldsymbol{\theta}_j}$ is independently trained, the raw $\partial p/\partial t$ field may not integrate exactly to zero over $x$, violating probability conservation.
+We enforce conservation by subtracting the spatial mean of the residual:
+\begin{equation}
+    \widetilde{\frac{\partial p}{\partial t}} = \frac{\partial p}{\partial t} - \frac{1}{x_{\max} - x_{\min}}\int_{x_{\min}}^{x_{\max}}\frac{\partial p}{\partial t}\,dx.
+    \label{eq:dpdt_corrected}
+\end{equation}
+
+Integrating the corrected continuity equation from the left boundary, where $J \to 0$, yields the probability current without knowledge of the force field:
+\begin{equation}
+    J(x,t) = -\int_{x_{\min}}^{x}\widetilde{\frac{\partial p}{\partial t}}(x',t)\,dx'.
+    \label{eq:J_continuity}
+\end{equation}
+The integral is evaluated by cumulative trapezoidal quadrature over the same spatial grid used in \cref{sec:epr_from_nf}.
+The EPR density then follows from \cref{eq:epr_density} as before:
+\begin{equation}
+    \sigma_{\mathrm{cont}}(x,t) = \frac{J(x,t)^2}{D\,p(x,t)},
+    \label{eq:epr_continuity}
+\end{equation}
+where $D$ is the only external parameter.
+
+\paragraph{Kramers--Moyal estimation of D.}
+When the true diffusion coefficient is not known \emph{a priori}, it can be estimated from the ensemble data via the second Kramers--Moyal coefficient~\cite{Kramers1940,Gorjao2021}:
+\begin{equation}
+    D_2(x,t) = \lim_{\tau \to 0}\frac{1}{2\tau}\left\langle\left[\Delta x\right]^2\,\middle|\, x(t) = x\right\rangle,
+    \label{eq:km_D2}
+\end{equation}
+where $\Delta x = x(t+\tau) - x(t)$ and the conditional average is evaluated by Nadaraya--Watson kernel regression with a Gaussian kernel of bandwidth $\sigma_{\mathrm{KM}} = \num{0.08}$.
+For the constant-diffusion Langevin dynamics considered here, $D_2$ should be spatially and temporally uniform at the value $D = k_{\mathrm{B}}T/\gamma = \num{0.5}$.
+The first Kramers--Moyal coefficient $D_1(x,t)$ provides an independent estimate of the drift field, serving as a qualitative diagnostic of the KM procedure.
+
+This force-free pipeline---NF densities for $p(x,t)$, the continuity equation for $J(x,t)$, and KM estimation for $D$---enables EPR computation from trajectory data alone, without specifying the equations of motion.
+
+
+%=============================================================================
+\section{Results}
+\label{sec:results}
+%=============================================================================
+
+\subsection{Equilibrium Validation}
+\label{sec:results_equilibrium}
+
+We first verify that the normalizing flow accurately reproduces the known equilibrium density in the absence of driving.
+Setting $h = 0$ (static symmetric double-well), we simulate the ensemble for $\num{6}$ cycles and extract particle positions at the final time step, which represent equilibrated samples from the Boltzmann distribution (\cref{eq:boltzmann}).
+A planar flow with $L = 12$ layers and a $K = 2$ GMM base is trained on the \num{5000} samples.
+
+\Cref{fig:equilibrium} presents the results.
+Panel~(a) shows that the learned density $p_{\mathrm{NF}}(x)$ is visually indistinguishable from the exact Boltzmann distribution, with a Kullback--Leibler (KL) divergence of $D_{\mathrm{KL}}(p_{\mathrm{NF}}\|p_{\mathrm{Boltz}}) \approx \num{0.002}$.
+Panel~(b) compares the score function $\partial\log p/\partial x$ obtained from the flow against the analytical expression $-V'(x)/k_{\mathrm{B}}T$; the two curves are in close agreement across the full spatial domain.
+Panel~(c) displays the EPR density $\sigma(x)$ reconstructed from the learned density.
+The integrated EPR is $\Sigma \approx \num{0.14}$, which is consistent with zero within the numerical noise inherent in finite-difference score estimation and finite-sample effects.
+This confirms that the flow-based pipeline correctly recovers detailed balance when the system is at equilibrium.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig1_equilibrium_validation.pdf}
+    \caption{Equilibrium validation at $h = 0$ (static double-well).
+    (a)~Learned NF density (dashed) versus exact Boltzmann distribution (solid), with ensemble histogram (shaded).
+    $D_{\mathrm{KL}} \approx \num{0.002}$.
+    (b)~Score function comparison: analytical $-V'(x)/k_{\mathrm{B}}T$ versus NF central-difference estimate.
+    (c)~EPR density $\sigma(x)$; the integrated value $\Sigma \approx \num{0.14}$ is consistent with zero (detailed balance).}
+    \label{fig:equilibrium}
+\end{figure}
+
+
+\subsection{Harmonic Potential Validation}
+\label{sec:results_harmonic}
+
+As a complementary test, we verify the flow on a unimodal target where the exact density is known analytically.
+We consider the harmonic potential $V(x) = kx^2/2$ with spring constant $k = 2.0$ and $k_{\mathrm{B}}T = 0.5$, for which the equilibrium distribution is a Gaussian $p(x) = \mathcal{N}(0, k_{\mathrm{B}}T/k)$ with standard deviation $\sigma_{\mathrm{eq}} = \num{0.5}$.
+A set of \num{5000} exact samples is drawn from this Gaussian (bypassing simulation), and a planar flow with $L = 10$ layers and a standard normal base ($K = 1$) is trained.
+
+\Cref{fig:harmonic} shows the result.
+Panel~(a) confirms that the learned density matches the exact Gaussian to high precision, with $D_{\mathrm{KL}}(p_{\mathrm{NF}}\|p_{\mathrm{exact}}) \approx \num{0.0014}$.
+Panel~(b) displays the pointwise residual $p_{\mathrm{NF}}(x) - p_{\mathrm{exact}}(x)$, which remains within $\pm\num{0.01}$ across the entire domain.
+This test confirms that the flow architecture and training procedure introduce negligible systematic bias when the target density is unimodal.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/fig2_harmonic_validation.pdf}
+    \caption{Harmonic potential validation ($V = kx^2/2$, $k = 2$, $k_{\mathrm{B}}T = 0.5$).
+    (a)~NF density versus exact Gaussian $\mathcal{N}(0, k_{\mathrm{B}}T/k)$, with $D_{\mathrm{KL}} \approx \num{0.0014}$.
+    (b)~Pointwise residual, bounded within $\pm\num{0.01}$.}
+    \label{fig:harmonic}
+\end{figure}
+
+
+\subsection{Non-Equilibrium Density Snapshots}
+\label{sec:results_snapshots}
+
+Having validated the flow in equilibrium, we apply it to the driven system.
+\Cref{fig:snapshots} shows the learned density $p(x|t)$ at five representative values of the tilt parameter: $h = -2, -1, 0, +1, +2$, corresponding to distinct phases of the sinusoidal protocol (\cref{eq:protocol}).
+Each panel overlays the NF density, the quasi-static Boltzmann reference, the particle histogram, and the rescaled potential $V(x,h)/k_{\mathrm{B}}T$ for visual context.
+
+At the extremes of the protocol ($h = \pm 2$), the potential is strongly tilted and the density is nearly unimodal, concentrated in the single remaining well.
+The flow correctly captures the asymmetric, sharp peak at these snapshots.
+At $h = 0$, the symmetric double-well produces a bimodal density; the GMM base allows the flow to faithfully resolve both peaks and the intervening minimum.
+At intermediate values ($h = \pm 1$), the density is asymmetric but bimodal, reflecting the partial tilting of the landscape.
+
+Comparison with the Boltzmann reference reveals the non-equilibrium character of the driven density.
+Because the protocol sweeps at a finite rate, the ensemble does not equilibrate instantaneously: hysteresis effects produce observable deviations from the quasi-static prediction, particularly near the phase-switching events at $|h| \approx h_s \approx 1.54$.
+The flow tracks these transient non-equilibrium features without difficulty.
+
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig3_learned_density_snapshots.pdf}
+    \caption{Learned density snapshots $p(x|t)$ at five protocol phases.
+    Each panel shows the NF density (dashed), Boltzmann reference (solid), ensemble histogram (shaded), and rescaled potential (dotted fill).
+    (a)~$h = -2$: unimodal, concentrated in the left well.
+    (b)~$h = -1$: asymmetric bimodal.
+    (c)~$h = 0$: symmetric bimodal.
+    (d)~$h = +1$: asymmetric bimodal.
+    (e)~$h = +2$: unimodal, concentrated in the right well.
+    Deviations from the Boltzmann reference reflect the non-equilibrium lag of the driven ensemble.}
+    \label{fig:snapshots}
+\end{figure}
+
+
+\subsection{EPR Comparison: NF versus Sekimoto and Schnakenberg}
+\label{sec:results_epr}
+
+\Cref{fig:epr_comparison} presents the central result of this work: a time-resolved comparison of the entropy production rate computed by three independent methods.
+
+Panel~(a) shows the driving protocol $h(t)$ and the ensemble-averaged response $\langle x\rangle(t)$ over one driving cycle.
+The characteristic hysteresis lag is evident: $\langle x\rangle(t)$ tracks $h(t)$ with a phase delay, and the abrupt jumps near $|h| \approx h_s$ correspond to catastrophic switching between the two potential wells.
+
+Panel~(b) overlays the instantaneous EPR from all three methods.
+The Sekimoto EPR (solid black) peaks during the rapid phase-switching events and reaches values of $\dot{\Sigma}_{\mathrm{Sek}} \approx \SI{5}{k_B/s}$ near the transitions.
+The NF-based EPR (blue circles) closely tracks the Sekimoto curve, reproducing both the location and amplitude of the dissipation peaks.
+The Schnakenberg coarse-grained EPR (red dashed) captures only the narrow spikes associated with interwell transitions and is essentially zero between switching events, reflecting its insensitivity to intrawell probability currents.
+
+Panel~(c) summarizes the cycle-integrated entropy production:
+\begin{align}
+    \Sigma_{\mathrm{Sek}}  &= \num{10.49}, \label{eq:sigma_sek_value} \\
+    \Sigma_{\mathrm{NF}}   &= \num{11.41}, \label{eq:sigma_nf_value} \\
+    \Sigma_{\mathrm{CG}}   &= \num{0.47}.  \label{eq:sigma_cg_value}
+\end{align}
+The NF estimate exhibits a slight overshoot ($\sim\!\num{109}\%$ of the Sekimoto value), attributable to tail noise in the score function at the boundaries of the spatial grid where the density is small and finite-difference errors are amplified.
+The coarse-grained Schnakenberg estimate captures only $\Sigma_{\mathrm{CG}}/\Sigma_{\mathrm{Sek}} \approx \num{4.5}\%$ of the total dissipation, meaning that $\sim\!\num{95}\%$ of the entropy production is hidden from the two-state projection.
+The NF-based method, by operating directly on the full density $p(x,t)$ and reconstructing the spatially resolved probability current, recovers the vast majority of this hidden dissipation.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/fig4_epr_nf_vs_sekimoto.pdf}
+    \caption{EPR decomposition over one driving cycle.
+    (a)~Protocol $h(t)$ (dashed) and ensemble response $\langle x\rangle(t)$ (solid).
+    (b)~Instantaneous EPR: Sekimoto total (black), NF estimate (blue circles), Schnakenberg CG (red dashed).
+    The shaded region between the Sekimoto and Schnakenberg curves represents the hidden entropy production.
+    (c)~Cycle-integrated entropy production: $\Sigma_{\mathrm{Sek}} = \num{10.49}$, $\Sigma_{\mathrm{NF}} = \num{11.41}$, $\Sigma_{\mathrm{CG}} = \num{0.47}$.
+    The two-state coarse-graining captures only $\approx\num{5}\%$ of the total dissipation; the NF-based method recovers $\sim\!\num{109}\%$ (slight overshoot from tail noise).}
+    \label{fig:epr_comparison}
+\end{figure}
+
+
+\subsection{Architecture Comparison: Standard versus GMM Base}
+\label{sec:results_architecture}
+
+We conclude by demonstrating the critical role of the GMM base distribution in enabling accurate density estimation for bimodal targets.
+\Cref{fig:architecture} compares a planar flow with a standard normal base ($K = 1$) against one with a two-component GMM base ($K = 2$), both trained on the equilibrium bimodal density at $h = 0$.
+
+Panel~(a) shows the learned densities.
+The standard-base flow produces a unimodal approximation that concentrates mass near $x = 0$, missing both wells entirely; its KL divergence with respect to the Boltzmann target is $D_{\mathrm{KL}} \approx \num{0.15}$--$\num{0.33}$ depending on the number of layers.
+The GMM-base flow faithfully resolves the bimodal structure, achieving $D_{\mathrm{KL}} \approx \num{0.002}$.
+
+Panel~(b) reveals the corresponding failure in the score function.
+The standard-base flow produces a monotonically decreasing score that misses the non-monotone structure dictated by the double-well potential, while the GMM-base flow accurately reproduces the analytical score $s(x) = -V'(x)/k_{\mathrm{B}}T$.
+
+Panel~(c) presents a systematic scan over the number of layers $L \in \{4, 8, 12, 16, 20\}$.
+For the standard normal base, the KL divergence remains in the range $\num{0.15}$--$\num{0.33}$ regardless of $L$, confirming that the failure is topological rather than capacity-limited: no number of monotone layers can convert a unimodal base into a bimodal density.
+For the GMM base, the KL divergence drops to $\sim\!\num{0.002}$ already at $L = 4$ and remains stable for larger $L$.
+This result validates the theoretical expectation: a multimodal base distribution is a necessary precondition for learning multimodal targets with monotone normalizing flows.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig5_architecture_comparison.pdf}
+    \caption{Base distribution comparison for the bimodal equilibrium density at $h = 0$.
+    (a)~Learned densities: the standard normal base (dotted) yields a unimodal fit with $D_{\mathrm{KL}} \approx \num{0.15}$--$\num{0.33}$; the GMM base (dashed) resolves both wells with $D_{\mathrm{KL}} \approx \num{0.002}$.
+    (b)~Score functions: the standard base misses the non-monotone structure; the GMM base matches the analytical expression.
+    (c)~KL divergence versus number of layers $L$: the standard base cannot improve beyond $D_{\mathrm{KL}} \sim 0.15$ regardless of depth, while the GMM base achieves $D_{\mathrm{KL}} \sim 0.002$ for all $L \geq 4$.}
+    \label{fig:architecture}
+\end{figure}
+
+
+\subsection{Force-Free EPR Validation}
+\label{sec:results_force_free}
+
+We validate the force-free continuity-equation method (\cref{sec:epr_force_free}) on the same driven Langevin ensemble, using the last cycle with $N_{\mathrm{bins}} = 20$ NF snapshots.
+The diffusion coefficient is estimated from the Kramers--Moyal $D_2$ (\cref{eq:km_D2}); all other quantities are derived from the NF-learned densities alone.
+\Cref{fig:km_epr} presents the four-panel validation.
+
+Panel~(a) compares the Kramers--Moyal first coefficient $D_1(x,t)$ against the known drift $-V'(x,h)/\gamma$ at five protocol phases spanning the full range of $h$.
+The KM-learned drift agrees qualitatively with the known force in the high-density region $|x| \lesssim 2$, reproducing the correct cubic shape and zero crossings.
+In the tails ($|x| > 2$), where particle density is low, the conditional average becomes noisy and the KM estimate diverges from the true drift.
+This tail divergence motivates the force-free approach: rather than using the noisy KM drift to reconstruct $J$, we bypass drift estimation entirely via the continuity equation.
+
+Panel~(b) shows the Kramers--Moyal second coefficient $D_2(x,t)$ across all snapshots.
+The spatially averaged value is $\langle D_2\rangle = \num{0.554}$, overshooting the true $D = \num{0.5}$ by $\num{10.8}\%$.
+This bias arises from the finite lag $\tau$ used in the conditional moment estimation: the $O(\tau)$ correction to $D_2$ is positive for nonlinear drift fields.
+Despite this bias, the KM estimate provides a sufficiently accurate $D$ for the continuity-equation EPR computation.
+
+Panel~(c) overlays the instantaneous EPR time series from the continuity method ($\dot{\Sigma}_{\mathrm{cont}}$) and the known-force NF method ($\dot{\Sigma}_{\mathrm{NF}}$).
+Both curves exhibit the characteristic double-peak structure associated with the spinodal crossings at $|h| \approx h_s$.
+The continuity-equation EPR systematically undershoots the known-force estimate, particularly at the dissipation peaks.
+This undershoot is attributable to the finite temporal resolution of the $\partial p/\partial t$ estimate: with $N_{\mathrm{bins}} = 20$ snapshots, the centered finite difference (\cref{eq:dpdt_fd}) smooths out the sharpest transient features of the probability current.
+
+Panel~(d) summarizes the cycle-integrated EPR:
+\begin{align}
+    \Sigma_{\mathrm{cont}} &= \num{9.31}, \label{eq:sigma_cont_value} \\
+    \Sigma_{\mathrm{NF}}   &= \num{10.87}, \label{eq:sigma_nf_fig6_value} \\
+    \Sigma_{\mathrm{Sek}}  &= \num{10.49}. \label{eq:sigma_sek_fig6_value}
+\end{align}
+The continuity-equation estimate achieves $\num{11.3}\%$ error relative to the Sekimoto reference, comfortably within the $\num{15}\%$ validation threshold.
+The known-force NF estimate from this reduced-bin run ($N_{\mathrm{bins}} = 20$, $L = 8$ layers) yields $\num{3.6}\%$ error, consistent with but slightly better than the full 40-bin analysis (\cref{sec:results_epr}) due to the different flow configuration.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig6_km_epr_comparison.pdf}
+    \caption{Force-free EPR validation via the continuity equation.
+    (a)~Kramers--Moyal drift $D_1(x,t)$ (solid) versus known drift $-V'(x,h)/\gamma$ (dashed) at five protocol phases.
+    Agreement is good in the high-density core; tails are noisy.
+    (b)~KM diffusion coefficient $D_2(x,t)$: spatially averaged $\langle D_2\rangle = \num{0.554}$, $\num{10.8}\%$ above the true $D = \num{0.5}$.
+    (c)~Instantaneous EPR: continuity method (green) versus known-force NF (blue).
+    The continuity estimate tracks the temporal structure but systematically undershoots at the dissipation peaks.
+    (d)~Cycle-integrated EPR: $\Sigma_{\mathrm{cont}} = \num{9.31}$ ($\num{11.3}\%$ error), $\Sigma_{\mathrm{NF}} = \num{10.87}$ ($\num{3.6}\%$), $\Sigma_{\mathrm{Sek}} = \num{10.49}$ (reference).}
+    \label{fig:km_epr}
+\end{figure}
