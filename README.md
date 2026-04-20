@@ -169,6 +169,10 @@ Default parameters: D=0.5, γ=1.0, h₀=2.0, T=10s
 - [ ] Conditional flows p(x|t) to exploit temporal smoothness
 - [ ] Submit manuscript to Physical Review E or Journal of Chemical Physics
 
+## Known Issues
+
+- **Fig 3 — `h=0` panel**: NF-learned density deviates notably from the Boltzmann reference at h=0, while the h=±1, ±2 panels agree visually. Likely physical (nonequilibrium vs. quasi-static reference) but may also reflect an NF optimization issue on the symmetric bimodal target. Needs investigation before submission. See GitLab issue [#1](https://gitlab.eif.urjc.es/afcaball/entropy-cromatines/-/issues/1).
+
 ## References
 
 - Kobyzev et al. (2020) "Normalizing Flows: An Introduction and Review" — IEEE TPAMI (suggested by collaborator)

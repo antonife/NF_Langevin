@@ -15,6 +15,11 @@ apply_style()
 
 
 def main():
+    # FIXME: At h=0 the NF density deviates notably from the Boltzmann reference,
+    # unlike h=+/-1, +/-2 where agreement is close. Likely physical (nonequilibrium
+    # vs quasi-static reference) but may also reflect an optimization issue with
+    # planar flows on the symmetric bimodal target. Investigate before submission.
+    # Tracked: https://gitlab.eif.urjc.es/afcaball/entropy-cromatines/-/issues/1
     # --- Simulate one full cycle ---
     params = LangevinParams()
     rng = np.random.default_rng(42)
