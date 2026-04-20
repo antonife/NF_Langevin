@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 *.pyo
 .ipynb_checkpoints/
+.ruff_cache/
 
 # LaTeX auxiliary
 *.aux

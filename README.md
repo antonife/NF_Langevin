@@ -14,9 +14,9 @@ We develop two methods:
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Core implementation | Complete | physics.py, flows_1d.py, epr.py, km_inference.py |
+| Core implementation | Complete | src/physics.py, src/flows_1d.py, src/epr.py, src/km_inference.py |
 | Figures 1-6 | Complete | All validation and comparison plots |
-| Manuscript | Draft complete | latex/main.tex (20 pages) |
+| Manuscript | Draft complete | manuscript/main.tex (20 pages) |
 | Talk | Complete | Talks/seminar_talk.tex (34 slides) |
 | Force-free method | Working | 11% error vs Sekimoto reference |
 
@@ -31,12 +31,13 @@ We develop two methods:
 
 ```
 NF_Langevin/
-├── physics.py              # Langevin simulation, Fokker-Planck current, parameters
-├── flows_1d.py             # 1D planar normalizing flows with GMM base
-├── epr.py                  # EPR methods: NF, continuity, Sekimoto, Schnakenberg
-├── km_inference.py         # Kramers-Moyal coefficient estimation
-├── pub_style.py            # Matplotlib publication style
-├── fig[1-6]_*.py           # Figure generation scripts
+├── src/                    # Python sources
+│   ├── physics.py          # Langevin simulation, Fokker-Planck current, parameters
+│   ├── flows_1d.py         # 1D planar normalizing flows with GMM base
+│   ├── epr.py              # EPR methods: NF, continuity, Sekimoto, Schnakenberg
+│   ├── km_inference.py     # Kramers-Moyal coefficient estimation
+│   ├── pub_style.py        # Matplotlib publication style
+│   └── fig[1-6]_*.py       # Figure generation scripts
 │
 ├── figures/                # Generated figures (PDF + PNG)
 │   ├── fig1_equilibrium_validation.*
@@ -46,7 +47,7 @@ NF_Langevin/
 │   ├── fig5_architecture_comparison.*
 │   └── fig6_km_epr_comparison.*
 │
-├── latex/                  # Manuscript
+├── manuscript/             # Manuscript (LaTeX)
 │   ├── main.tex            # Main document
 │   ├── introduction.tex
 │   ├── methods_results.tex
@@ -72,23 +73,28 @@ Python 3.9+ recommended. Uses `numpy.trapezoid` (not deprecated `trapz`).
 ## Quick Start
 
 ```bash
-# Clone
+# Clone (GitHub mirror)
 git clone git@github.com:antonife/NF_Langevin.git
 cd NF_Langevin
 
+# Or clone from GitLab (entropy-cromatines, branch normalizing-flows)
+git clone -b normalizing-flows git@gitlab.eif.urjc.es:afcaball/entropy-cromatines.git
+
 # Generate all figures (takes ~30 min total)
+cd src
 python fig1_equilibrium_validation.py
 python fig2_harmonic_validation.py
 python fig3_learned_density_snapshots.py
 python fig4_epr_nf_vs_sekimoto.py
 python fig5_architecture_comparison.py
 python fig6_km_epr_comparison.py
+cd ..
 
 # Compile manuscript
-cd latex && latexmk -pdf main.tex
+cd manuscript && latexmk -pdf main.tex && cd ..
 
 # Compile talk
-cd Talks && latexmk -pdf seminar_talk.tex
+cd Talks && latexmk -pdf seminar_talk.tex && cd ..
 ```
 
 ## Core API
